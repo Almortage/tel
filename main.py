@@ -1,208 +1,603 @@
-from pyrogram import Client, filters, idle
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from pyrogram.errors import PeerIdInvalid
-from asyncio import get_event_loop
-from config import bot, bot_id, db, SUDORS
-import asyncio, os
+import telebot
+from telebot.types import *
+from sqll import *
+import requests
 
-def add_new_user(user_id):
-	if is_user(user_id):
-		return
-	db.sadd(f"botusers&{bot_id}", user_id)
-def is_user(user_id):
-	try:
-		users = get_users()
-		if user_id in users:
-			return True
-		return False
-	except:
-		return False
-def get_users():
-	try:
-		return db.get(f"botusers&{bot_id}")["set"]
-	except:
-		return []
+token = "6195511173:AAFtP0o9LRvHZ-WttLa0EnH_uQ-5_8GzICg"
 
-def users_backup():
-	text = ""
-	for user in get_users():
-		text += f"{user}\n"
-	with open("users.txt", "w+") as f:
-		f.write(text)
-	return "users.txt"
+bot = telebot.TeleBot(token)
 
-def del_user(user_id: int):
-	if not is_user(user_id):
-		return False
-	db.srem(f"botusers{bot_id}", user_id)
-	return True
+my_id = "5089553588"
 
-async def main():
-	await bot.start()
-	await idle()
+msg = "" # اتركها لا تخلي اي شي
+
+mainCommandsText = "اهلا بك يا مطوري في لوحة الاوامر!" # رساله المطور تكدر تعدلها
+
+WelcomeMember = "اهلا بك ياعزيزي المستخدم!"  # رساله العضو تكدر تغيرها
 
 
-@bot.on_message(filters.command("start") & filters.private)
-async def new_user(bot, msg):
-	if not is_user(msg.from_user.id):
-		add_new_user(msg.from_user.id)
-		text = f"""
-• دخل عضو جديد للبوت
 
-• الاسم : {msg.from_user.first_name}
-• منشن : {msg.from_user.mention}
-• الايدي : {msg.from_user.id}
-		"""
-		reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(f"• عدد الاعضاء: {len(get_users())}", callback_data= "users")]])
-		if len(SUDORS) > 0:
-			for user_id in SUDORS:
-				await bot.send_message(int(user_id), text, reply_markup=reply_markup)
-		else:
-			await bot.send_message(int(SUDORS[0]), text, reply_markup=reply_markup)
-@bot.on_message(filters.command("start") & filters.private, group=1)
-async def admins(bot, msg):
-	if msg.from_user.id in SUDORS:
-		reply_markup = ReplyKeyboardMarkup([
-			[("• الاحصائيات •"),("• اخفاء الكيبورد •")],
-			[("• اوامر التواصل •")],
-			[("• تفعيل التواصل •"), ("• تعطيل التواصل •")],
-			[("• اوامر الاذاعه •")],
-			[("• اذاعه •"),("• اذاعه بالتوجيه •"),("• اذاعه بالتثبيت •")],
-			[("• اوامر الاعضاء •")],
-			[("• نسخه اعضاء •"), ("• رفع نسخه •")],
-			[("• الغاء •")]])
-		await msg.reply(f"• اهلا عزيزي المطور {msg.from_user.mention}", reply_markup=reply_markup, quote=True)
-@bot.on_message(filters.text & filters.private, group=2)
-async def cmd(bot, msg):
-	if msg.from_user.id in SUDORS:
-		if msg.text == "• الغاء •":
-			await msg.reply("• تم الغاء كل العمليات", quote=True)
-			db.delete(f"{msg.from_user.id}:fbroadcast:{bot_id}")
-			db.delete(f"{msg.from_user.id}:pinbroadcast:{bot_id}")
-			db.delete(f"{msg.from_user.id}:broadcast:{bot_id}")
-			db.delete(f"{msg.from_user.id}:users_up:{bot_id}")
-		if msg.text == "• اخفاء الكيبورد •":
-			await msg.reply("• تم اخفاء الكيبورد ارسل /start لعرضه مره اخري", reply_markup=ReplyKeyboardRemove(selective=True), quote=True)
-		if msg.text == "• الاحصائيات •":
-			await msg.reply(f"• عدد الاعضاء: {len(get_users())}\n• عدد المشرفين: {len(SUDORS)}", quote=True)
-		if msg.text == "• تفعيل التواصل •":
-			if not db.get(f"{msg.from_user.id}:twasl:{bot_id}"):
-				await msg.reply("• تم تفعيل التواصل", quote=True)
-				db.set(f"{msg.from_user.id}:twasl:{bot_id}", 1)
-			else:
-				await msg.reply("• التواصل مفعل من قبل", quote=True)
-		if msg.text == "• تعطيل التواصل •":
-			if db.get(f"{msg.from_user.id}:twasl:{bot_id}"):
-				await msg.reply("• تم تعطيل التواصل", quote=True)
-				db.delete(f"{msg.from_user.id}:twasl:{bot_id}")
-			else:
-				await msg.reply("• التواصل غير مفعل", quote=True)
-		if msg.text == "• اذاعه •":
-			await msg.reply("• ارسل الاذاعه ( نص ، ملف ، جهه اتصال ، متحركه ، ملصق ، صوره )", quote=True)
-			db.set(f"{msg.from_user.id}:broadcast:{bot_id}", 1)
-			db.delete(f"{msg.from_user.id}:fbroadcast:{bot_id}")
-			db.delete(f"{msg.from_user.id}:pinbroadcast:{bot_id}")
-		if msg.text == "• اذاعه بالتوجيه •":
-			await msg.reply("• ارسل الاذاعه ( نص ، ملف ، جهه اتصال ، متحركه ، ملصق ، صوره )", quote=True)
-			db.set(f"{msg.from_user.id}:fbroadcast:{bot_id}", 1)
-			db.delete(f"{msg.from_user.id}:pinbroadcast:{bot_id}")
-			db.delete(f"{msg.from_user.id}:broadcast:{bot_id}")
-		if msg.text == "• اذاعه بالتثبيت •":
-			await msg.reply("• ارسل الاذاعه ( نص ، ملف ، جهه اتصال ، متحركه ، ملصق ، صوره )", quote=True)
-			db.set(f"{msg.from_user.id}:pinbroadcast:{bot_id}", 1)
-			db.delete(f"{msg.from_user.id}:fbroadcast:{bot_id}")
-			db.delete(f"{msg.from_user.id}:broadcast:{bot_id}")
-		if msg.text == "• نسخه اعضاء •":
-			wait = await msg.reply("• انتظر قليلا ..", quote=True)
-			await bot.send_document(msg.chat.id, users_backup())
-			await wait.delete()
-			os.remove("users.txt")
-		if msg.text == "• رفع نسخه •":
-			await msg.reply("• ارسل الان نسخه ملف الاعضاء", quote=True)
-			db.set(f"{msg.from_user.id}:users_up:{bot_id}", 1)
+def MangeBot():
+    mrk = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(text= "تفعيل التواصل", callback_data= "on communication"),
+                InlineKeyboardButton(text= "تعطيل التواصل", callback_data= "off communication"),
+            ],
+            [
+                InlineKeyboardButton(text= "تفعيل اشعار الدخول", callback_data= "on access"),
+                InlineKeyboardButton(text= "تعطيل اشعار الدخول", callback_data= "off access"),
+            ],
+            [
+                InlineKeyboardButton(text= "الاحصائيات", callback_data= "statistics"),
+            ],
+            [
+                InlineKeyboardButton(text= "مسح المحظورين", callback_data= "del blcs"),
+                InlineKeyboardButton(text= "مسح محظور", callback_data= "del blc"),
+                InlineKeyboardButton(text= "حظر", callback_data= "blc"),
+            ],
+            [
+                InlineKeyboardButton(text= "مسح القنوات المحظورة", callback_data= "del channels"),
+                InlineKeyboardButton(text= "مسح قناة محظورة", callback_data= "del channel"),
+                InlineKeyboardButton(text= "حظر قناة", callback_data= "blc channel"),
+            ],
+            [
+                InlineKeyboardButton(text= "قناة الاشتراك الاجباري", callback_data= "sub chn"),
+                InlineKeyboardButton(text= "اضف قناة", callback_data= "add chn"),
+                InlineKeyboardButton(text= "مسح قناة", callback_data= "del chn"),
+            ],
+            [
+                InlineKeyboardButton(text= "اذاعة للكل", callback_data="brd all"),
+            ],
+            [
+                InlineKeyboardButton(text= "اذاعة بالتثبيت للأعضاء", callback_data= "brdcast pin me"),
+                InlineKeyboardButton(text= "اذاعة للأعضاء", callback_data= "brdcast me"),
+                InlineKeyboardButton(text= "اذاعة بالتحويل للأعضاء", callback_data= "brdcast fod me"),
+            ],
+            [
+                InlineKeyboardButton(text= "اذاعة بالتثبيت للقنوات", callback_data= "brdcast pin ch"),
+                InlineKeyboardButton(text= "اذاعة للقنوات", callback_data= "brdcast ch"),
+                InlineKeyboardButton(text= "اذاعة بالتحويل للقنوات", callback_data= "brdcast fod ch"),
+            ],
+        ]
+    )
+    return mrk
 
-@bot.on_message(filters.private, group=3)
-async def forbroacasts(bot, msg):
-	if msg.from_user.id in SUDORS and msg.text != "• اذاعه •" and msg.text != "• اذاعه بالتوجيه •" and msg.text != "• اذاعه بالتثبيت •" and msg.text != "• الغاء •" and msg.text != "• رفع نسخه •" and msg.text != "• اوامر الاذاعه •" and msg.text != "• تعطيل التواصل •" and msg.text != "• تفعيل التواصل •" and msg.text != "• اوامر التواصل •" and msg.text != "• اخفاء الكيبورد •" and msg.text != "• الاحصائيات •":
-		if db.get(f"{msg.from_user.id}:broadcast:{bot_id}"):
-			db.delete(f"{msg.from_user.id}:broadcast:{bot_id}")
-			message = await msg.reply("• جاري الإذاعة ..", quote=True)
-			current = 1
-			for user in get_users():
-				try:
-					await msg.copy(int(user))
-					progress = (current / len(get_users())) * 100
-					current += 1
-					if not db.get(f"{msg.from_user.id}:flood:{bot_id}"):
-						await message.edit(f"• نسبه الاذاعه {int(progress)}%")
-						db.set(f"{msg.from_user.id}:flood:{bot_id}", 1)
-						db.expire(f"{msg.from_user.id}:flood:{bot_id}", 4)
-				except PeerIdInvalid:
-					del_user(int(user))
-			await message.edit("• تمت الاذاعه بنجاح")
-		if db.get(f"{msg.from_user.id}:pinbroadcast:{bot_id}"):
-			db.delete(f"{msg.from_user.id}:pinbroadcast:{bot_id}")
-			message = await msg.reply("• جاري الإذاعة ..", quote=True)
-			current = 1
-			for user in get_users():
-				try:
-					m = await msg.copy(int(user))
-					await m.pin(disable_notification=False,both_sides=True)
-					progress = (current / len(get_users())) * 100
-					current += 1
-					if not db.get(f"{msg.from_user.id}:flood:{bot_id}"):
-						await message.edit(f"• نسبه الاذاعه {int(progress)}%")
-						db.set(f"{msg.from_user.id}:flood:{bot_id}", 1)
-						db.expire(f"{msg.from_user.id}:flood:{bot_id}", 4)
-				except PeerIdInvalid:
-					del_user(int(user))
-			await message.edit("• تمت الاذاعه بنجاح")
-		if db.get(f"{msg.from_user.id}:fbroadcast:{bot_id}"):
-			db.delete(f"{msg.from_user.id}:fbroadcast:{bot_id}")
-			message = await msg.reply("• جاري الإذاعة ..", quote=True)
-			current = 1
-			for user in get_users():
-				try:
-					await msg.forward(int(user))
-					progress = (current / len(get_users())) * 100
-					current += 1
-					if not db.get(f"{msg.from_user.id}:flood:{bot_id}"):
-						await message.edit(f"• نسبه الاذاعه {int(progress)}%")
-						db.set(f"{msg.from_user.id}:flood:{bot_id}", 1)
-						db.expire(f"{msg.from_user.id}:flood:{bot_id}", 4)
-				except PeerIdInvalid:
-					del_user(int(user))
-			await message.edit("• تمت الاذاعه بنجاح")
-	if msg.document and db.get(f"{msg.from_user.id}:users_up:{bot_id}"):
-		message = await msg.reply(f"• انتظر قليلا ..", quote=True)
-		await msg.download("./users.txt")
-		db.delete(f"botusers{bot_id}")
-		file = open("./users.txt", "r", encoding="utf8", errors="ignore")
-		for user in file.read().splitlines():
-			if not is_user(user):
-				add_new_user(user)
-		await message.edit(f"• تم رفع نسخه الاعضاء \n• عدد الاعضاء : {len(get_users())}")
-		try:
-			os.remove("./users.txt")
-			db.delete(f"{msg.from_user.id}:users_up:{bot_id}")
-		except:
-			pass
-@bot.on_message(filters.private, group=4)
-async def twasl(bot, msg):
-	if msg.from_user.id not in SUDORS:
-		for user in SUDORS:
-			if db.get(f"{user}:twasl:{bot_id}"):
-				await msg.forward(user)
-	if msg.from_user.id in SUDORS:
-		if msg.reply_to_message:
-			if msg.reply_to_message.forward_from:
-				try:
-					await msg.copy(msg.reply_to_message.forward_from.id)
-					await msg.reply(f"• تم إرسال رسالتك إلى {msg.reply_to_message.forward_from.first_name} بنجاح", quote=True)
-				except Exception as Error:
-					await msg.reply(f"• لم يتم ارسال رسالتك بسبب: {str(Error)}", quote=True)
-					pass
+def back():
+    mrk = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(text= '. رجوع .',callback_data= "back")]
+        ]
+    )
+    return mrk
 
-print("RUNNING")
-loop = get_event_loop()
-loop.run_until_complete(main())
+def cans():
+    mrk = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton(text= '. الغاء .',callback_data= "cans")]
+        ]
+    )
+    return mrk
+
+def getTitleAUrl():
+    ch = get_compulsory_subscription()
+    if ch not in [0, "0"]:
+        all = bot.create_chat_invite_link(ch, name=__name__)
+        return all.invite_link
+    else:
+        return None
+    
+
+def source():
+    all = getTitleAUrl()
+    if all:
+        
+        mrk = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(text= "سورس البوت", url= all)
+                ]
+            ]
+        )
+        return mrk
+    
+    else:
+        return None
+
+
+
+def HandleMessageMember():
+    mrk = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(text= 'رد', callback_data= "reply"),
+                InlineKeyboardButton(text= 'حظر', callback_data= "block"),
+            ]
+        ]
+    )
+    return mrk
+
+
+# فنكشن تتحقق هل اليوزر مشترك بالقناه او لا
+def IN_channel(user_id):
+    url = f"https://api.telegram.org/bot{token}/getChatMember?chat_id={get_compulsory_subscription()}&user_id={user_id}"
+    req = requests.get(url).json()
+    if "result" in req:
+        if req["result"]["status"] in ["member", "creator", "administrator"]:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
+# ستارت فقط للمطور
+@bot.message_handler(func= lambda message: message.from_user.id in [my_id], commands=['start'])
+def MainMenuDev(message:Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    bot.send_message(chat_id=chat_id, text= mainCommandsText, reply_markup= MangeBot())
+
+
+# ستارت لاي عضو
+@bot.message_handler(func= lambda message: message.from_user.id not in [my_id], commands=['start'])
+def MainMenuDev(message:Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    txt1 = WelcomeMember
+    txt2 = "اشترك في قناة البوت لأستخدام الاوامر!"
+    mrk = source()
+    inf = get_user_info(user_id)
+    if inf and inf[1] == "mms":
+        if mrk:
+            txt = txt2
+            if not IN_channel(user_id):
+                bot.send_message(chat_id=chat_id, text= txt, reply_to_message_id= message.id, reply_markup=source())
+
+            else:
+                txt = txt1
+                bot.send_message(chat_id=chat_id, text= txt, reply_to_message_id= message.id, reply_markup=source())
+        else:
+            bot.send_message(chat_id=chat_id, text= txt1, reply_to_message_id= message.id)
+
+    # اذا كان العضو جديد
+    if not get_user_info(user_id):
+        if get_notifications() not in [0, "0"]:
+            txt = "تم دخول مستخدم جديد ال البوت" + f"\nالايدي = {user_id} " + f"\nالاسم = {message.from_user.first_name}" + f"\nالمعرف = {message.from_user.username} \n`"
+            bot.send_message(my_id, txt)
+    insert_user(user_id, "mms")
+    
+
+#  العضو اذا ارسل رساله غير ستارت
+@bot.message_handler(func= lambda message: message.text)
+def MainMenuDev(message:Message):
+    global msg
+    msg = message
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    txt1 = "اهلا بك!"
+    txt2 = "اشترك في قناة البوت لأستخدام الاوامر!"
+    mrk = source()
+    inf = get_user_info(user_id)
+    if inf and inf[1] == "mms":
+        if mrk:
+            txt = txt2
+            if not IN_channel(user_id):
+                bot.send_message(chat_id=chat_id, text= txt, reply_to_message_id= message.id, reply_markup=mrk)
+            else:
+                txt = txt1
+                bot.send_message(chat_id=chat_id, text= txt, reply_to_message_id= message.id, reply_markup=mrk)
+                if get_login() not in [0, "0"]:
+                    bot.send_message(my_id, f"الرسالة = {message.text}" + "\nمن = " + f"\nالاسم = {message.from_user.first_name}" + f"\nالمعرف = {message.from_user.username}", reply_markup=HandleMessageMember())
+        else:
+            bot.send_message(chat_id=chat_id, text= txt1, reply_to_message_id= message.id)
+            if get_login() not in [0, "0"]:
+                    bot.send_message(my_id, f"الرسالة = {message.text}" + "\nمن = " + f"\nالاسم = {message.from_user.first_name}" + f"\nالمعرف = {message.from_user.username}", reply_markup=HandleMessageMember())
+    if not get_user_info(user_id):
+        if get_notifications() not in [0, "0"]:
+            txt = "تم دخول مستخدم جديد ال البوت" + f"\الايدي = {user_id} " + f"\nالاسم = {message.from_user.first_name}" + f"\nالمعرف = {message.from_user.username}"
+            bot.send_message(my_id, txt)
+    insert_user(user_id, "mms")
+    
+
+
+
+
+
+@bot.callback_query_handler(func= lambda call:True)
+def MAinQury(call: CallbackQuery):
+    data = call.data
+    message = call.message
+    chat_id = message.chat.id
+    user_id = call.from_user.id
+    if user_id in [my_id]:
+        if data == "on communication":
+            txt = "تم تقغيل التواصل"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+            update_user_settings(login=1)
+
+        elif data == "off communication":
+            txt = "تم تعطيل التواصل"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+            update_user_settings(login=0)
+
+        elif data == "on access":
+            txt = "تم تفعيل اشعارات الدخول"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+            update_user_settings(notifications=0)
+
+        elif data == "off access":
+            txt = "تم تعطيل اشعارات الدخول"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+            update_user_settings(notifications=0)
+
+
+        elif data == "statistics":
+            num_us, num_blcs, num_ch, num_gr = (get_total_mms(), get_total_bans(), get_total_ch(), get_total_gr())
+            txt = "عزيزي المطور, اليك القائمة الخاصة باحصائيات البوت" + f"\nعدد مستخدمين البوت = {num_us}" + f"\nعدد المحظورين = {num_blcs}" + f"\nعدد القنوات = {num_ch}" + f"\nعدد الكروبات = {num_gr}"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+
+
+        elif data == "del blcs":
+            txt = "تم حذف جميع المستخدمين المحظورين"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+            unban_uss()
+            
+        elif data == "del blc":
+            txt = "ارسل ايدي المحظور"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, unban)
+
+        elif data == "blc":
+            txt = "ارسل ايدي المستخدم"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, ban)
+
+
+        elif data == "del channels":
+            txt = "تم حذف جميع القنوات المحظورة"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+            unban_channels()
+            
+        elif data == "del channel":
+            txt = "ارسل ايدي القناة المحظورة"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, unblock)
+
+        elif data == "blc channel":
+            txt = "ارسل ايدي القناة لحظرها"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, block)
+
+
+        elif data == "sub chn":
+            ch = get_compulsory_subscription()
+            txt1 = "قناة الاشتراك الاجباري" + "\nاسم القناة: {name_ch}" + "\nمعرف القناة: {us_ch}" + "\nايدي القناة: {id_ch}"
+            txt2 = "عذرا, ليس لديك قناة اشتارك اجباري!"
+            if ch in [0, "0"]:
+                txt = txt2
+            else:
+                all = bot.get_chat(ch)
+                txt = txt1.format(name_ch = all.title, us_ch = all.username, id_ch = all.id)
+
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+
+        elif data == "add chn":
+            txt = "لأضافه قناة اشتراك اجباري يجب اولا رفع البوت مشرفا في القناة" + "\nارسل ايدي او معرف القناة"
+            bot.register_next_step_handler(message, addCh)
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+
+        elif data == "del chn":
+            txt = "تم حذف قناة الاشتراك الاجباري!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=back())
+            update_user_settings(compulsory_subscription=0)
+
+
+        elif data == "brd all":
+            txt = "ارسل محتوى الاذاعة, انتبة يجب ان تكون نصية!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, brd_all)
+
+
+        elif data == "brdcast me":
+            txt = "ارسل محتوى الاذاعة, انتبة يجب ان تكون نصية!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, broadcast)
+
+        elif data == "brdcast pin me":
+            txt = "ارسل محتوى الاذاعة للتثبيت, انتبة يجب ان تكون نصية!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, broadcast_pin)
+
+        elif data == "brdcast fod me":
+            txt = "ارسل محتوى الاذاعة للتحويل, انتبة يجب ان تكون نصية!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, broadcast_fod)
+
+
+        elif data == "brdcast ch":
+            txt = "ارسل محتوى الاذاعة, انتبة يجب ان تكون نصية!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, brd)
+
+        elif data == "brdcast pin ch":
+            txt = "ارسل محتوى الاذاعة للتثبيت, انتبة يجب ان تكون نصية!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, brd_pin)
+
+        elif data == "brdcast fod ch":
+            txt = "ارسل محتوى الاذاعة للتحويل, انتبة يجب ان تكون نصية!"
+            bot.edit_message_text(text= txt, chat_id=chat_id, message_id=message.id, reply_markup=cans())
+            bot.register_next_step_handler(message, brd_fod)
+
+
+        elif data == "cans":
+            bot.clear_step_handler(message)
+            bot.edit_message_text(text= "تم الغاء المهمة بنجاح!", chat_id=chat_id, message_id=message.id, reply_markup=back())
+
+        elif data == "back":
+            bot.edit_message_text(text= mainCommandsText, chat_id=chat_id, message_id=message.id, reply_markup=MangeBot())
+
+
+        elif data == "reply":
+            bot.send_message(text= "ارسل الرد: ", chat_id=chat_id,  reply_markup=cans())
+            bot.register_next_step_handler(message, rplt)
+
+        elif data == "block":
+            bot.send_message(text= "المستخدم تم حظرة!", chat_id=chat_id,  reply_markup=back())
+            try:
+                bot.send_message(text= "لقد تم حظرك من استخدام البوت!", chat_id=msg.chat.id)
+            except:
+                pass
+            update_user(msg.from_user.id, "blc")
+
+
+
+
+
+
+
+
+def ban(message:Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    txt = "تم حظر المستخدم بنجاح!"
+    if message.text:
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+        try:
+                bot.send_message(text= "لقد تم حظرك من استخدام البوت!", chat_id=message.text)
+        except:
+            pass
+        update_user(user_id= message.text, type= "blc")
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+
+def unban(message:Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    txt = "تم الغاء حظر المستخدم بنجاح!"
+    if message.text:
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+        try:
+                bot.send_message(text= "لقد تم الغاء الحظر عن حسابك!", chat_id=message.text)
+        except:
+            pass
+        update_user(user_id= message.text, type= "mms")
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+
+def block(message:Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    txt = "تم حظر القناة بنجاح!"
+    if message.text:
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+        try:
+            bot.leave_chat(message.text)
+        except:
+            pass
+        update_channel(user_id= message.text, blc= "1")
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+
+def unblock(message:Message):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    txt = "تم الغاء الحظر عن القناة بنجاح!"
+    if message.text:
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+        update_channel(user_id= message.text, blc= "0")
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+def addCh(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        try:
+            id = bot.get_chat(message.text).id
+            txt = "تم اضافه قناة الاشتراك الاجباري بنجاح!"
+            bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+            update_user_settings(compulsory_subscription=id)
+        except:
+            txt = "تحقق من وجود البوت في القناة"
+            bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+def brd_all(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        for user_id in get_total_users():
+            try:
+                bot.send_message(user_id, message.text, disable_web_page_preview=True)
+            except:
+                pass
+        for channel_id in get_total_channels():
+            try:
+                bot.send_message(channel_id, message.text, disable_web_page_preview=True)
+            except:
+                pass
+        txt = "تم ارسال الاذاعة الى الكل!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+def broadcast(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        for user_id in get_total_users():
+            try:
+                bot.send_message(user_id, message.text, disable_web_page_preview=True)
+            except:
+                pass
+        txt = "تم ارسال الاذاعة الى جميع المستخدمين!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+
+def broadcast_pin(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        for user_id in get_total_users():
+            try:
+                m = bot.send_message(user_id, message.text, disable_web_page_preview=True)
+                bot.pin_chat_message(m.chat.id, m.id)
+            except:
+                pass
+        txt = "تم ارسال الاذاعة الى جميع المستخدمين!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+def broadcast_fod(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        for user_id in get_total_users():
+            try:
+                bot.forward_message(user_id, chat_id, message.id)
+            except:
+                pass
+        txt = "تم ارسال الاذاعة الى جميع المستخدمين!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+def brd(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        for channel_id in get_total_channels():
+            try:
+                bot.send_message(channel_id, message.text, disable_web_page_preview=True)
+            except:
+                pass
+        txt = "تم ارسال الاذاعة الى جميع القنوات!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+
+def brd_pin(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        for channel_id in get_total_channels():
+            try:
+                bot.send_message(channel_id, message.text, disable_web_page_preview=True)
+            except:
+                pass
+        txt = "تم ارسال الاذاعة الى جميع القنوات!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+def brd_fod(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        for channel_id in get_total_channels():
+            try:
+                bot.send_message(channel_id, message.text, disable_web_page_preview=True)
+            except:
+                pass
+        txt = "تم ارسال الاذاعة الى جميع القنوات!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+
+
+def rplt(message:Message):
+    chat_id = message.chat.id
+    if message.text:
+        txt = f"الرد= {message.text}"
+        bot.send_message(text= txt, chat_id=msg.chat.id)
+
+    else:
+        txt = "يجب ان تكون الرسالة نصية!"
+        bot.send_message(text= txt, chat_id=chat_id, reply_markup=back())
+
+
+
+
+
+
+# فنشكن اذا البوت انظم لكروب او قناه
+@bot.my_chat_member_handler(func= lambda chat:True)
+def MyChatMember(message:ChatMemberUpdated):
+    chat_id = message.chat.id
+    user_id = message.from_user.id
+    inf = get_channel_info(chat_id)
+
+    if message.new_chat_member.status == "kicked":
+        delete_channel(chat_id)
+
+
+    if not inf and message.chat.type == "channel":
+        try:
+            link = bot.create_chat_invite_link(message.chat.id, name=message.chat.title).invite_link
+            bot.send_message(my_id, f"تم تفعيل بوتك في قناة: الايدي = {chat_id} | المعرف = {link}")
+            bot.send_message(user_id, "تم تفعيل البوت في قناتك, استمتع بالمميزات!")
+        except:
+            pass
+        insert_channel(chat_id, "ch")
+    elif  inf and message.chat.type == "channel":
+        if not inf[2] in [0, "0"]:
+            try:
+                bot.leave_chat(chat_id)
+            except:
+                pass
+
+
+
+
+
+
+print("Your Bot Running ...")
+
+
+bot.infinity_polling(skip_pending=True, allowed_updates=telebot.util.update_types)
