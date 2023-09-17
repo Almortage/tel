@@ -25,7 +25,7 @@ from io import BytesIO
 admin_id = ['5089553588']
 block_id=[]
 import langdetect
-if os.getenv('6195511173:AAGxbMZMOWaqII7zH9cV7DF0pNGRODNoZyM')!=None:
+if os.getenv('TOKEN')!=None:
     def texttosp(text):
      lang = langdetect.detect(text)
     
@@ -170,7 +170,7 @@ if os.getenv('6195511173:AAGxbMZMOWaqII7zH9cV7DF0pNGRODNoZyM')!=None:
        [InlineKeyboardButton("اضافة ادمن [👑] ", callback_data='add_admin'),InlineKeyboardButton("مسح ادمن [⛔] ", callback_data='remove_admin')],
        [InlineKeyboardButton("حظر مستخدم",callback_data="block"),InlineKeyboardButton("الغاء حظر مستخدم",callback_data="unblock")],
        [InlineKeyboardButton("- ارسل التخزين 📥 .",callback_data="t5"),InlineKeyboardButton("احصائيات[📄] ", callback_data='status')],
-       [InlineKeyboardButton("قناة البوت [👁] ", url="https://t.me/AlmortagelTech")],
+       [InlineKeyboardButton("قناة البوت [👁] ", url="https://t.me/botatiiii")],
        ]
 
        reply_markup2 = InlineKeyboardMarkup(keyboard2)
@@ -178,7 +178,7 @@ if os.getenv('6195511173:AAGxbMZMOWaqII7zH9cV7DF0pNGRODNoZyM')!=None:
       elif not admin_id:
        mem_id=str(update.effective_chat.id)
        keyboard = [
-              [InlineKeyboardButton("مطور البوت", url="https://t.me/hms_01"),InlineKeyboardButton("قناة المطور", url="https://t.me/AlmortagelTech")],
+              [InlineKeyboardButton("مطور البوت", url="https://t.me/hms_01"),InlineKeyboardButton("قناة المطور", url="https://t.me/botatiiii")],
              ]
        reply_markup = InlineKeyboardMarkup(keyboard)
        update.message.reply_text(f"""بوت ادمن بنل
@@ -222,7 +222,7 @@ if os.getenv('6195511173:AAGxbMZMOWaqII7zH9cV7DF0pNGRODNoZyM')!=None:
        update.message.reply_text("انت محظور عليك تكليم المالك")
 
     try:
-        updater = Updater(token=os.getenv('6195511173:AAGxbMZMOWaqII7zH9cV7DF0pNGRODNoZyM'), use_context=True)
+        updater = Updater(token=os.getenv('TOKEN'), use_context=True)
     except:
         print("Invalid token exception")
         quit()
