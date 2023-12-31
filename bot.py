@@ -25,7 +25,7 @@ from io import BytesIO
 admin_id = ['5089553588']
 block_id=[]
 import langdetect
-if os.getenv('TOKEN')!=None:
+if os.getenv('6195511173:AAGxbMZMOWaqII7zH9cV7DF0pNGRODNoZyM')!=None:
     def texttosp(text):
      lang = langdetect.detect(text)
     
