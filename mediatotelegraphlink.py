@@ -1,35 +1,8 @@
-from config import Config 
-import asyncio 
-from pyrogram import Client, filters, idle
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
-from kvsqlite.sync import Client as DB
-from datetime import date
-from pyrogram.errors import FloodWait 
-botdb = DB('botdb.sqlite')
-from pyrogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
-from pyrogram.errors import SessionPasswordNeeded, PhoneCodeExpired
-from pyrogram.errors.exceptions.bad_request_400 import PasswordHashInvalid
-from pyrogram.errors.exceptions.not_acceptable_406 import PhoneNumberInvalid
-from pyrogram.errors.exceptions.bad_request_400 import PhoneCodeInvalid
-from pyrogram import Client, filters
-from pyrogram.types import Message
-from telegraph import upload_file
 import os
-#############################################################################
-from telethon import TelegramClient
-from telethon import __version__ as v2
-from telethon.sessions import StringSession
-from telethon.errors import (
-    PhoneNumberInvalidError,
-    PhoneCodeInvalidError,
-    PhoneCodeExpiredError,
-    SessionPasswordNeededError,
-    PasswordHashInvalidError
-)
-from pyromod import listen
-from pyrogram import (
-    __version__ as v
-)
+from telegraph import upload_file
+from pyrogram import filters, Client
+from pyrogram.types import (InlineKeyboardMarkup, InlineKeyboardButton)
+############################################################################
 
 #حقوق احمد @H1HHIH - @Almortagel_12
 # تطوير مودي الهيبه اذا ما ذكرت مصدر بنحكح امك @Almortagel_12 - @SOURCE_ZE 
@@ -381,63 +354,48 @@ async def on_Callback(c,m):
       text+="\n\n—"
       await m.message.reply(text,quote=True)
 
-@teletips.on_message(filters.command('start') & filters.private)
-async def start(client, message):
-    text = f"""
-اهلا {message.from_user.mention},
-🔮أنا هنا لإنشاء روابط التلجراف لملفات الوسائط الخاصة بك.
 
-👨🏼‍💻ما عليك سوى إرسال ملف وسائط صالح مباشرة إلى هذه الدردشة.
-♻️انواع الملفات الصالحه هي:- 'jpeg', 'jpg', 'png', 'mp4' and 'gif'.
+app = Client(
+   # get these information from my.telegram.org
+   "Telegra.ph Uploader",
+   api_id=13848,
+   api_hash="99172839e8a8d95",
+   bot_token="6553005927:AAH2CTrIlBh4x9x",
+)
 
-🌐لأنشاء الروابط في **المجموعات**,اضفني لمجموعه خارقه اي عامه وارسل الامر <code>/tl</code> ردا علي ملف وسائط صالح.
-🖥 | [AlmortagelTech🌀](https://t.me/AlmortagelTech)
 
-☣️ | [ALMORTAGEL](https://t.me/Almortagel_12)
-            """
-    await teletips.send_message(message.chat.id, text, disable_web_page_preview=True)
-    
+@app.on_message(filters.command(["start"]))
+async def home(client, message):
+    buttons = [
+        [InlineKeyboardButton((await client.get_chat(5089553588)).first_name, url="t.me/AlmortagelTech"),
+         InlineKeyboardButton((await client.get_chat("@AlmortagelTech")).title, url="AlmortagelTech.t.me")]
+    ]
+    await message.reply_text(
+        "- send me a media that's less than 5mb.",
+        reply_markup=InlineKeyboardMarkup(buttons),
+        reply_to_message_id=message.id
+    )
 
-@teletips.on_message(filters.media & filters.private)
-async def get_link_private(client, message):
-    try:
-        text = await message.reply("🔮انتظر قليلا...")
-        async def progress(current, total):
-            await text.edit_text(f"📥 جاري التنزيل... {current * 100 / total:.1f}%")
-        try:
-            location = f"./media/private/"
-            local_path = await message.download(location, progress=progress)
-            await text.edit_text("📤 جاري الرفع الي التليجراف...")
-            upload_path = upload_file(local_path) 
-            await text.edit_text(f"**🌐 | رابط التليجراف**:\n\n<code>https://telegra.ph{upload_path[0]}</code>")     
-            os.remove(local_path) 
-        except Exception as e:
-            await text.edit_text(f"**❌ | فشل رفع الملف**\n\n<i>**Reason**: {e}</i>")
-            os.remove(local_path) 
-            return                 
-    except Exception:
-        pass        
 
-@teletips.on_message(filters.command('tl'))
-async def get_link_group(client, message):
-    try:
-        text = await message.reply("🔮انتظر قليلا...")
-        async def progress(current, total):
-            await text.edit_text(f"📥 جاري التنزيل... {current * 100 / total:.1f}%")
-        try:
-            location = f"./media/group/"
-            local_path = await message.reply_to_message.download(location, progress=progress)
-            await text.edit_text("📤 جاري الرفع الي التليجراف...")
-            upload_path = upload_file(local_path) 
-            await text.edit_text(f"**🌐 | رابط التليجراف**:\n\n<code>https://telegra.ph{upload_path[0]}</code>")     
-            os.remove(local_path) 
-        except Exception as e:
-            await text.edit_text(f"**❌ | فشل رفع الملف**\n\n<i>**Reason**: {e}</i>")
-            os.remove(local_path) 
-            return         
-    except Exception:
-        pass                                           
+@app.on_message(filters.photo | filters.video | filters.animation)
+async def upload(client, message):
+  msg = await message.reply_text("- Downloading...〽️")
+  user_id = str(message.from_user.id)
+  if message.video:
+      if (message.video.file_size > 5242880): return await message.reply_text("The Media Size Must Be Less than 5mb.")
+      path = (f"./DOWNLOADS/{user_id}.mp4")
+  elif message.animation:
+      if (message.animation.file_size > 5242880): return await message.reply_text("The Media Size Must Be Less than 5mb.")
+      path = (f"./DOWNLOADS/{user_id}.mp4")
+  elif message.photo: path = (f"./DOWNLOADS/{user_id}.jpg")
+  path = await client.download_media(message=message, file_name=path)
+  await msg.edit_text("- Uploading...🔥")
+  try: url = upload_file(path)
+  except: return await msg.edit_text("- Something went wrong 📍")
+  await msg.edit_text(f"https://telegra.ph{url[0]}")     
+  os.remove(path)
+  
 
-print("البوت شغال!")
-teletips.run()
-
+if __name__ == "__main__": app.run()
+# 𝗪𝗥𝗜𝗧𝗧𝗘𝗡 𝗕𝗬 : @BENN_DEV
+# 𝗦𝗢𝗨𝗥𝗖𝗘 : @AlmortagelTech
