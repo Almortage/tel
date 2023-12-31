@@ -1,7 +1,3 @@
-pyrogram
-tgcrypto
-telegraph
-asBASE
 python-dotenv==0.20.0
 requests
 DateTime
@@ -16,6 +12,7 @@ mindai
 googletrans
 langdetect
 gTTS
-Kvsqlite
 pyrogram
-pyromod
+tgcrypto
+telegraph
+asBASE
