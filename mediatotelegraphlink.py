@@ -46,7 +46,7 @@ bot = Client(
   bot_token=token, in_memory=True
 )
 app = Client(
-  name="session",
+  name="MediaToTelegraphLink",
   api_id=api_id, api_hash=api_hash,
   bot_token=token, in_memory=True
 )
@@ -381,13 +381,6 @@ async def on_Callback(c,m):
       text+="\n\n—"
       await m.message.reply(text,quote=True)
 
-teletips=Client(
-    "MediaToTelegraphLink",
-    api_id = int(os.environ["API_ID"]),
-    api_hash = os.environ["API_HASH"],
-    bot_token = os.environ["BOT_TOKEN"]
-)
-
 @teletips.on_message(filters.command('start') & filters.private)
 async def start(client, message):
     text = f"""
@@ -447,3 +440,4 @@ async def get_link_group(client, message):
 
 print("البوت شغال!")
 teletips.run()
+
